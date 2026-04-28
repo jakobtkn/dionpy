@@ -18,7 +18,7 @@ app = marimo.App(width="medium")
 def _():
     import marimo as mo
     from dionpy.onion import Onion, Layer
-    from dionpy.constants import C_0
+    from dionpy.constants import C_0, EPS_0
     import numpy as np
     import matplotlib.pyplot as plt
 
@@ -39,7 +39,8 @@ def _(Onion, np):
     r_c = np.array([20e-3,27e-3,81e-3,27e-3,81e-3,27e-3])
     eps_c = np.array([50,1,4,4,4,4])
     test_c = Onion.from_arrays(r_c, eps_c, frequency=1.5e9)
-    return test_a, test_c
+
+    return (test_a,)
 
 
 @app.cell
@@ -57,18 +58,28 @@ def _(plt, test_a):
 
 
 @app.cell
-def _(test_c):
-    a_TM, b_TM, a_TE, b_TE = test_c.solve(10)
+def _(C_0, Onion, np):
+    # a_TM, b_TM, a_TE, b_TE = test_c.solve(10)
+    # test_a.solve_and_plot(num_modes=20)
+
+    freq = 400e9
+    test_7_13 = Onion.from_arrays(np.array([C_0/freq]), np.array([2.56]),freq)
+    test_7_13.solve_and_plot(num_modes=20)
+    # # From 
+    # freq = 400e9
+    # test_transparent = Onion.from_arrays(np.array([C_0/freq]),np.array([2.56]),frequency=freq)
+    # test_transparent.solve_and_plot(num_modes=20)
     return
 
 
 @app.cell
-def _(C_0, Onion, np):
-    freq = 400e6
-    test_7_13 = Onion.from_arrays(np.array([C_0/freq]), np.array([2.56]),freq)
+def _():
 
-    fig = test_7_13.solve_and_plot(num_modes=20)
-    fig
+
+    # freq = 400e6
+    # test_7_13 = Onion.from_arrays(np.array([C_0/freq]), np.array([2.56]),freq)
+
+    # test_7_13.solve_and_plot(num_modes=20)
     return
 
 

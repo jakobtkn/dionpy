@@ -191,7 +191,7 @@ class Onion:
 
         return A_TM, A_TE, rhs_TM, rhs_TE
 
-    def solve_and_plot(self, num_modes, component="magnitude"):
+    def solve_and_plot(self, num_modes, component="magnitude",plot_log=False):
         """Plot the scattered field on the xz and yz planes.
 
         Parameters
@@ -235,19 +235,29 @@ class Onion:
                 E, H = np.real(E_r), np.real(H_r)
             return E, H
 
-        def _sph_on_grid(horiz, vert, phi_fixed=None):
+        def _sph_on_grid(horiz, vert, phi_fixed=None,theta_fixed=None):
             """Evaluate scattered_field in spherical coords on a 2-D grid.
 
             horiz / vert are the two Cartesian axes spanned by the grid.
             phi_fixed overrides the azimuth (used for the xz plane where y=0).
+            theta_fixed overides the elevation (used for xy plane where z=0)
             """
             r = np.sqrt(horiz**2 + vert**2)
-            theta = np.where(r > 0, np.arccos(np.clip(vert / r, -1, 1)), 0.0)
+            if theta_fixed is not None:
+                theta = np.full_like(r,theta_fixed)
+            else:
+                theta = np.where(r > 0, np.arccos(np.clip(vert / r, -1, 1)), 0.0)
+            
             if phi_fixed is not None:
                 phi = np.full_like(r, phi_fixed)
             else:
-                phi = np.arctan2(horiz, np.zeros_like(horiz))  # yz: x=0, so phi=±π/2
+                phi = np.arctan2(vert, horiz)  # xy: φ varies with y/x
             return scattered_field(a_sc, b_sc, k_outer, r, theta, phi)
+
+        def _20log10(Field):
+            return 20*np.log10(Field)
+        
+
 
         # E-plane: xz (y = 0, phi = 0 for x > 0)
         E_r, E_t, E_p, H_r, H_t, H_p = _sph_on_grid(U, V, phi_fixed=0.0)
@@ -264,6 +274,13 @@ class Onion:
         E_yz[inside] = np.nan
         H_yz[inside] = np.nan
 
+        # xy (z = 0, theta = π/2)
+        E_r, E_t, E_p, H_r, H_t, H_p = _sph_on_grid(U, V, theta_fixed=np.pi / 2)
+        E_xy, H_xy = _extract(E_r, E_t, E_p, H_r, H_t, H_p)
+        H_xy = ETA_0 * H_xy
+        E_xy[inside] = np.nan
+        H_xy[inside] = np.nan
+
         comp_label = {
             "magnitude": r"\mathbf{{F}}^\mathrm{{sc}}",
             "phi":       r"F^\mathrm{{sc}}_\phi",
@@ -271,10 +288,11 @@ class Onion:
             "r":         r"F^\mathrm{{sc}}_r",
         }[component]
 
-        fig, axes = plt.subplots(2, 2, figsize=(13, 10))
+        fig, axes = plt.subplots(3, 2, figsize=(10, 15))
         planes = [
             (E_xz, H_xz, "xz (E-plane)", r"$x / \lambda$", r"$z / \lambda$"),
             (E_yz, H_yz, "yz (H-plane)", r"$y / \lambda$", r"$z / \lambda$"),
+            (E_xy, H_xy, "xy (V-plane)", r"$x / \lambda$", r"$y / \lambda$")
         ]
         for row, (E_data, H_data, plane_label, xlabel, ylabel) in enumerate(planes):
             for col, (data, field_sym, unit, prefix) in enumerate([
@@ -284,7 +302,7 @@ class Onion:
                 label = prefix + comp_label.replace("F", field_sym)
                 flabel = rf"$\mathrm{{Re}}\{{{label}\}}$ ({unit})"
                 ax = axes[row, col]
-                im = ax.pcolormesh(U / wavelength, V / wavelength, data, shading="auto", cmap="inferno", vmin=-1, vmax=1)
+                im = ax.pcolormesh(U / wavelength, V / wavelength, _20log10(data), shading="auto", cmap="inferno", vmin=-1, vmax=1)
                 ax.add_patch(
                     plt.Circle((0, 0), r_outer / wavelength, fill=False, color="white", lw=1.5, ls="--")
                 )
