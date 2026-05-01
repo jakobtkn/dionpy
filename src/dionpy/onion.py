@@ -258,7 +258,6 @@ class Onion:
             return 20*np.log10(Field)
         
 
-
         # E-plane: xz (y = 0, phi = 0 for x > 0)
         E_r, E_t, E_p, H_r, H_t, H_p = _sph_on_grid(U, V, phi_fixed=0.0)
         E_xz, H_xz = _extract(E_r, E_t, E_p, H_r, H_t, H_p)

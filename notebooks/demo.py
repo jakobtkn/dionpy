@@ -21,50 +21,50 @@ def _():
     from dionpy.constants import C_0, EPS_0
     import numpy as np
     import matplotlib.pyplot as plt
+    from dionpy.rcs import bistatic_rcs
 
-    return C_0, Onion, np, plt
-
-
-@app.cell
-def _(Onion, np):
-
-    r_a = np.array([3e-3,4e-3,12e-3])
-    eps_a = np.array([50,1,4])
-    test_a = Onion.from_arrays(r_a, eps_a, frequency=10e9)
-
-    r_b = np.array([20e-3,27e-3,81e-3])
-    eps_b = np.array([50,1,4])
-    test_b = Onion.from_arrays(r_b, eps_b, frequency=1.5e9)
-
-    r_c = np.array([20e-3,27e-3,81e-3,27e-3,81e-3,27e-3])
-    eps_c = np.array([50,1,4,4,4,4])
-    test_c = Onion.from_arrays(r_c, eps_c, frequency=1.5e9)
-
-    return (test_a,)
+    return Onion, bistatic_rcs, mo, np, plt
 
 
 @app.cell
-def _(plt, test_a):
-    A_TM, A_TE, b, _ = test_a.assemble_one_mode(5)
-    fig, axes = plt.subplots(1, 3, figsize=(12, 4))
-    axes[0].matshow(abs(A_TM) > 0)
-    axes[0].set_title("A_TM")
-    axes[1].matshow(abs(A_TE) > 0)
-    axes[1].set_title("A_TE")
-    axes[2].matshow(abs(b[:,None]) > 0)
-    axes[2].set_title("b")
-    fig
+def _():
+
+    # r_a = np.array([3e-3,4e-3,12e-3])
+    # eps_a = np.array([50,1,4])
+    # test_a = Onion.from_arrays(r_a, eps_a, frequency=10e9)
+
+    # r_b = np.array([20e-3,27e-3,81e-3])
+    # eps_b = np.array([50,1,4])
+    # test_b = Onion.from_arrays(r_b, eps_b, frequency=1.5e9)
+
+    # r_c = np.array([20e-3,27e-3,81e-3,27e-3,81e-3,27e-3])
+    # eps_c = np.array([50,1,4,4,4,4])
+    # test_c = Onion.from_arrays(r_c, eps_c, frequency=1.5e9)
     return
 
 
 @app.cell
-def _(C_0, Onion, np):
+def _():
+    # A_TM, A_TE, b, _ = test_a.assemble_one_mode(5)
+    # fig, axes = plt.subplots(1, 3, figsize=(12, 4))
+    # axes[0].matshow(abs(A_TM) > 0)
+    # axes[0].set_title("A_TM")
+    # axes[1].matshow(abs(A_TE) > 0)
+    # axes[1].set_title("A_TE")
+    # axes[2].matshow(abs(b[:,None]) > 0)
+    # axes[2].set_title("b")
+    # fig
+    return
+
+
+@app.cell
+def _():
     # a_TM, b_TM, a_TE, b_TE = test_c.solve(10)
     # test_a.solve_and_plot(num_modes=20)
 
-    freq = 400e9
-    test_7_13 = Onion.from_arrays(np.array([C_0/freq]), np.array([2.56]),freq)
-    test_7_13.solve_and_plot(num_modes=20)
+    # freq = 400e9
+    # test_7_13 = Onion.from_arrays(np.array([C_0/freq]), np.array([2.56]),freq)
+    # test_7_13.solve_and_plot(num_modes=20)
     # # From 
     # freq = 400e9
     # test_transparent = Onion.from_arrays(np.array([C_0/freq]),np.array([2.56]),frequency=freq)
@@ -83,8 +83,184 @@ def _():
     return
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""
+    Test Example 7.13 from Chen
+    """)
+    return
+
+
 @app.cell
 def _():
+    # from dionpy.field import scattered_field, scattered_field_xyz
+
+    # freq = 400e9
+    # radii_in_lambda = [1.0, 0.5, 0.2]
+    # colors          = ['steelblue', 'darkorange', 'seagreen']
+    # theta           = np.linspace(0, np.pi, 361)
+    # theta_deg       = np.degrees(theta)
+
+    # fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+    # for r_lambda, color in zip(radii_in_lambda, colors):
+
+    #     # --- Build sphere whose radius = r_lambda × λ ---
+    #     lam0   = C_0 / freq                        # free-space wavelength
+    #     radius = r_lambda * lam0                   # physical radius [m]
+
+    #     sphere = Onion.from_arrays(np.array([radius]), np.array([2.56]), freq)
+    #     a_TM, b_TM, a_TE, b_TE = sphere.solve(num_modes=30)
+
+    #     b_sc = b_TM[:, -1]                         # TM scattered coefficients
+    #     d_sc = b_TE[:, -1]                         # TE scattered coefficients
+    #     k    = sphere.k(-1)                        # outer wavenumber
+    #     lam  = 2 * np.pi / k                       # wavelength in outer medium
+
+    #     label = f'r = {r_lambda}λ'
+
+    #     # --- E-plane (φ = 0) ---
+    #     rcs_E = np.array([bistatic_rcs(k, t, 0,          b_sc, d_sc) for t in theta])
+    #     rcs_E_dB = 10 * np.log10(np.maximum(rcs_E / lam**2, 1e-20))
+    #     axes[0].plot(theta_deg, rcs_E_dB, color=color, linewidth=1.5, label=label)
+
+    #     # --- H-plane (φ = π/2) ---
+    #     rcs_H = np.array([bistatic_rcs(k, t, np.pi/2,   b_sc, d_sc) for t in theta])
+    #     rcs_H_dB = 10 * np.log10(np.maximum(rcs_H / lam**2, 1e-20))
+    #     axes[1].plot(theta_deg, rcs_H_dB, color=color, linewidth=1.5, label=label)
+
+    # # --- Shared axes formatting ---
+    # for ax, plane in zip(axes, ['E-Plane  (φ = 0°)', 'H-Plane  (φ = 90°)']):
+    #     ax.set_xlabel('θ (degrees)')
+    #     ax.set_ylabel('RCS / λ²  (dB)')
+    #     ax.set_title(f'Bistatic RCS vs θ — {plane}')
+    #     ax.set_xlim(0, 180)
+    #     ax.set_ylim(-50, 25)
+    #     ax.set_xticks(np.arange(0, 181, 30))
+    #     ax.legend()
+    #     ax.grid(True, linestyle=':', alpha=0.6)
+
+    # fig.suptitle('Bistatic Radar Cross Section  (εᵣ = 2.56,  f = 400 GHz)',
+    #              fontsize=13, fontweight='bold', y=1.01)
+    # plt.tight_layout()
+    # fig.savefig(r"C:\Users\holge\git\dionpy\Plots/RCS_example_fig_7_14.png")
+
+    # plt.show()
+
+    return
+
+
+@app.cell
+def _():
+    # # ── Monostatic RCS vs a/λ  (Figure 7.15 reproduction) ──────────────────────
+    # freq   = 400e9
+    # lam0   = C_0 / freq
+    # eps_r  = 2.56
+
+    # a_over_lam = np.linspace(0.01, 2.0, 400)   # sweep sphere size
+    # rcs_mono   = np.zeros(len(a_over_lam))
+
+    # for i, al in enumerate(a_over_lam):
+    #     a      = al * lam0                                      # physical radius
+    #     sphere = Onion.from_arrays(np.array([a]), np.array([eps_r]), freq)
+    #     a_TM, b_TM, a_TE, b_TE = sphere.solve(num_modes=50)
+
+    #     b_sc = b_TM[:, -1]
+    #     d_sc = b_TE[:, -1]
+    #     k    = sphere.k(-1)
+
+    #     # backscatter: θ = π, φ = 0
+    #     rcs_mono[i] = bistatic_rcs(k, np.pi, 0.0, b_sc, d_sc)
+
+    # # normalise by πa²
+    # a_phys      = a_over_lam * lam0
+    # rcs_norm    = rcs_mono / (np.pi * a_phys**2)
+    # rcs_norm_dB = 10 * np.log10(np.maximum(rcs_norm, 1e-20))
+
+    # # ── Plot ─────────────────────────────────────────────────────────────────────
+    # fig, ax = plt.subplots(figsize=(8, 5))
+
+    # ax.plot(a_over_lam, rcs_norm_dB, color='k', linewidth=1.5)
+
+    # ax.set_xlabel('$a/\\lambda$', fontsize=12)
+    # ax.set_ylabel('$\\sigma_{3D} / \\pi a^2$  (dB)', fontsize=12)
+    # ax.set_title('Monostatic RCS — Dielectric Sphere  ($\\varepsilon_r = 2.56$)', fontsize=12)
+    # ax.set_xlim(0, 2.0)
+    # ax.set_ylim(-50, 20)
+    # ax.set_xticks(np.arange(0, 2.1, 0.5))
+    # ax.set_yticks(np.arange(-50, 21, 10))
+    # ax.annotate('Rayleigh scattering region', xy=(0.02, -30),
+    #             xytext=(0.25, -30), fontsize=10,
+    #             arrowprops=dict(arrowstyle='<-', color='k'))
+    # ax.grid(True, linestyle=':', alpha=0.6)
+    # fig.savefig(r"C:\Users\holge\git\dionpy\Plots/RCS_example_fig_7_15.png")
+    # plt.tight_layout()
+    # plt.show()
+    return
+
+
+@app.cell
+def _(Onion, bistatic_rcs, np, plt):
+    # PLot of forward Direction: theta = 0
+    # In both cases, plot first 𝜎𝜎3D(𝜃𝜃,𝜙𝜙) (or more precisely, 10log10􀸫𝜎𝜎3D/(𝜋𝜋𝑟𝑟32)􀸫 dB) in the so-called 
+    # forward-direction as a function of the frequency in a suitable range with 𝑓𝑓0 as it centre frequency.
+
+    # ── Forward-direction (θ=0) RCS vs frequency, normalised by πr₃² ─────────────
+
+    configs = [
+        dict(label='Config A', r=np.array([3e-3,  4e-3, 12e-3]),
+             eps=np.array([50, 1, 4]), f0=10e9),
+        dict(label='Config B', r=np.array([20e-3, 27e-3, 81e-3]),
+             eps=np.array([50, 1, 4]), f0=1.5e9),
+    ]
+
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+    for ax, cfg in zip(axes, configs):
+        f0  = cfg['f0']
+        r   = cfg['r']
+        eps = cfg['eps']
+        r3  = r[-1]                                  # outer-shell radius
+
+        freqs = np.linspace(0.1 * f0, 3.0 * f0, 400)
+        rcs_fwd = np.zeros(len(freqs))
+
+        for i, freq in enumerate(freqs):
+            sphere = Onion.from_arrays(r, eps, frequency=freq)
+            _, b_TM, _, b_TE = sphere.solve(num_modes=50)
+
+            b_sc = b_TM[:, -1]
+            d_sc = b_TE[:, -1]
+            k    = sphere.k(-1)
+
+            # forward direction: θ=0 (φ arbitrary by symmetry)
+            rcs_fwd[i] = bistatic_rcs(k, 0.0, 0.0, b_sc, d_sc)
+
+        rcs_dB = 10 * np.log10(np.maximum(rcs_fwd / (np.pi * r3**2), 1e-20))
+
+        ax.plot(freqs / f0, rcs_dB, color='steelblue', linewidth=1.5)
+        ax.axvline(1.0, color='k', linestyle='--', linewidth=1,
+                   label=f'$f_0$ = {f0/1e9:.1f} GHz')
+
+        # annotate the layer structure
+        layer_str = '  |  '.join(
+            f'$\\varepsilon_r$={e}, r={ri*1e3:.0f} mm'
+            for e, ri in zip(eps, r)
+        )
+        ax.set_xlabel('$f \\ / \\ f_0$', fontsize=11)
+        ax.set_ylabel('$\\sigma_{{3D}} \\ / \\ \\pi r_3^2$  (dB)', fontsize=11)
+        ax.set_title(f'{cfg["label"]}:  {layer_str}', fontsize=9)
+        ax.set_xlim(0.1, 3.0)
+        ax.legend(fontsize=10)
+        ax.grid(True, linestyle=':', alpha=0.6)
+
+    fig.suptitle(
+        'Bistatic RCS — Forward Direction ($\\theta = 0$)',
+        fontsize=13, fontweight='bold', y=1.01
+    )
+    plt.tight_layout()
+    plt.show()
+
     return
 
 
