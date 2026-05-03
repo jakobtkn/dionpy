@@ -301,7 +301,10 @@ class Onion:
                 label = prefix + comp_label.replace("F", field_sym)
                 flabel = rf"$\mathrm{{Re}}\{{{label}\}}$ ({unit})"
                 ax = axes[row, col]
-                im = ax.pcolormesh(U / wavelength, V / wavelength, _20log10(data), shading="auto", cmap="inferno", vmin=-1, vmax=1)
+                if plot_log:
+                    im = ax.pcolormesh(U / wavelength, V / wavelength, _20log10(data), shading="auto", cmap="inferno", vmin=-1, vmax=1)
+                else: 
+                    im = ax.pcolormesh(U / wavelength, V / wavelength, data, shading="auto", cmap="inferno", vmin=-1, vmax=1)
                 ax.add_patch(
                     plt.Circle((0, 0), r_outer / wavelength, fill=False, color="white", lw=1.5, ls="--")
                 )
@@ -315,5 +318,137 @@ class Onion:
             f"Scattered field  (f = {self.freq/1e9:.2f} GHz,  component = {component})",
             y=1.01,
         )
+        fig.tight_layout()
+        return fig
+
+    def solve_and_plot_rcs_nearfield(self, num_modes: int = 50, label: str = ""):
+        """Plot bistatic RCS (col 1) and near-field |E| (col 2) for three cut planes.
+
+        Layout
+        ------
+        Row 1 : XY plane  (θ = π/2)
+        Row 2 : XZ plane  (E-plane, φ = 0)
+        Row 3 : YZ plane  (H-plane, φ = π/2)
+
+        Column 1 : Bistatic RCS  10·log10(σ3D / π r3²)  [dB]  vs θ ∈ [0°, 180°]
+        Column 2 : Near-field |E|  20·log10(|E|)  [dB(V/m)]
+        """
+        import matplotlib.pyplot as plt
+        from .field import scattered_field
+        from .rcs import bistatic_rcs
+
+        # ── 1.  Solve ────────────────────────────────────────────────────────────
+        a_TM, b_TM, a_TE, b_TE = self.solve(num_modes)
+
+        b_sc  = b_TM[:, -1]          # TM scattered coefficients
+        d_sc  = b_TE[:, -1]          # TE scattered coefficients
+        k     = self.k(-1)            # wavenumber in outer (unbounded) medium
+        r3    = self.r(-2)            # outer radius of last physical shell
+        lam   = 2 * np.pi / k
+        norm  = np.pi * r3**2         # normalisation for RCS
+
+        # ── 2.  RCS curves ───────────────────────────────────────────────────────
+        theta     = np.linspace(0, np.pi, 361)
+        theta_deg = np.degrees(theta)
+
+        # XY cut  →  θ = π/2,  φ sweeps 0 → π  (same as azimuth scan)
+        rcs_xy = np.array([bistatic_rcs(k, np.pi / 2, t, b_sc, d_sc) for t in theta])
+
+        # XZ cut  →  φ = 0,    θ sweeps 0 → π  (E-plane)
+        rcs_xz = np.array([bistatic_rcs(k, t, 0.0,         b_sc, d_sc) for t in theta])
+
+        # YZ cut  →  φ = π/2,  θ sweeps 0 → π  (H-plane)
+        rcs_yz = np.array([bistatic_rcs(k, t, np.pi / 2,   b_sc, d_sc) for t in theta])
+
+        def _to_dB(rcs):
+            return 10 * np.log10(np.maximum(rcs / norm, 1e-20))
+
+        # ── 3.  Near-field grids ─────────────────────────────────────────────────
+        lim = 3.0 * lam
+        N   = 300
+        u   = np.linspace(-lim, lim, N)
+        U, V = np.meshgrid(u, u)
+
+        def _E_magnitude(horiz, vert, phi_fixed=None, theta_fixed=None):
+            """Return 20·log10(|E_sc|) on a 2-D Cartesian grid."""
+            r_grid = np.sqrt(horiz**2 + vert**2)
+
+            if theta_fixed is not None:
+                theta_grid = np.full_like(r_grid, theta_fixed)
+            else:
+                theta_grid = np.where(
+                    r_grid > 0,
+                    np.arccos(np.clip(vert / r_grid, -1, 1)),
+                    0.0,
+                )
+
+            if phi_fixed is not None:
+                phi_grid = np.full_like(r_grid, phi_fixed)
+            else:
+                phi_grid = np.arctan2(vert, horiz)
+
+            E_r, E_t, E_p, *_ = scattered_field(b_sc, d_sc, k, r_grid,
+                                                theta_grid, phi_grid)
+            E_mag = np.sqrt(np.abs(E_r)**2 + np.abs(E_t)**2 + np.abs(E_p)**2)
+
+            # Mask interior of sphere
+            inside      = horiz**2 + vert**2 < r3**2
+            E_mag[inside] = np.nan
+
+            return 20 * np.log10(np.maximum(E_mag, 1e-30))
+
+        E_xy_dB = _E_magnitude(U, V, theta_fixed=np.pi / 2)   # XY: z = 0
+        E_xz_dB = _E_magnitude(U, V, phi_fixed=0.0)            # XZ: y = 0, E-plane
+        E_yz_dB = _E_magnitude(U, V, phi_fixed=np.pi / 2)      # YZ: x = 0, H-plane
+
+        # ── 4.  Plot ─────────────────────────────────────────────────────────────
+        fig, axes = plt.subplots(3, 2, figsize=(13, 16))
+
+        rcs_ylabel = (
+            r"$10\log_{10}\!\left(\sigma_\mathrm{3D}\,/\,\pi r_3^2\right)$  (dB)"
+        )
+
+        plane_cfg = [
+            # (rcs_data,  x_label_rcs,    rcs_title,           E_dB,      h_label,        v_label,       nf_title)
+            (rcs_xy, r"$\phi$ (degrees)", "RCS — XY  (θ = 90°)", E_xy_dB, r"$x/\lambda$", r"$y/\lambda$", r"|E$^{sc}$| — XY  (z = 0)"),
+            (rcs_xz, r"$\theta$ (degrees)","RCS — XZ  (E-plane, φ = 0°)",  E_xz_dB, r"$x/\lambda$", r"$z/\lambda$", r"|E$^{sc}$| — XZ  (y = 0)"),
+            (rcs_yz, r"$\theta$ (degrees)","RCS — YZ  (H-plane, φ = 90°)", E_yz_dB, r"$y/\lambda$", r"$z/\lambda$", r"|E$^{sc}$| — YZ  (x = 0)"),
+        ]
+
+        for row, (rcs, x_rcs, title_rcs, E_dB, h_lbl, v_lbl, title_nf) in enumerate(plane_cfg):
+
+            # ── Column 0 : RCS ───────────────────────────────────────────────────
+            ax = axes[row, 0]
+            ax.plot(theta_deg, _to_dB(rcs), color="steelblue", linewidth=1.5)
+            ax.axvline(90, color="gray", linestyle=":", linewidth=1)
+            ax.set_xlabel(x_rcs, fontsize=11)
+            ax.set_ylabel(rcs_ylabel, fontsize=10)
+            ax.set_title(title_rcs, fontsize=11)
+            ax.set_xlim(0, 180)
+            ax.set_xticks(np.arange(0, 181, 30))
+            ax.grid(True, linestyle=":", alpha=0.6)
+
+            # ── Column 1 : Near-field |E| ────────────────────────────────────────
+            ax = axes[row, 1]
+            vmin = np.nanpercentile(E_dB, 2)
+            vmax = np.nanpercentile(E_dB, 98)
+            im = ax.pcolormesh(
+                U / lam, V / lam, E_dB,
+                shading="auto", cmap="inferno",
+                vmin=vmin, vmax=vmax,
+            )
+            ax.add_patch(
+                plt.Circle((0, 0), r3 / lam,
+                            fill=False, color="white", lw=1.5, ls="--")
+            )
+            ax.set_aspect("equal")
+            ax.set_xlabel(h_lbl, fontsize=11)
+            ax.set_ylabel(v_lbl, fontsize=11)
+            ax.set_title(title_nf, fontsize=11)
+            plt.colorbar(im, ax=ax, label=r"$20\log_{10}|E^{sc}|$  (dB V/m)")
+
+        title = f"Bistatic RCS & Near-Field  —  {label}  " \
+                rf"($f_0 = {self.freq/1e9:.2f}$ GHz,  $r_3 = {r3*1e3:.1f}$ mm)"
+        fig.suptitle(title, fontsize=13, fontweight="bold")
         fig.tight_layout()
         return fig
