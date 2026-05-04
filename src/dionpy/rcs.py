@@ -1,34 +1,5 @@
 from scipy.special import assoc_legendre_p
 import numpy as np
-# scipy.special.assoc_legendre_p
-# assoc_legendre_p(n, m, z, *, branch_cut=2, norm=False, diff_n=0) = <scipy.special._multiufuncs.MultiUFunc object>[source]
-# Associated Legendre polynomial of the first kind.
-
-# Parameters
-# :
-# n
-# ArrayLike[int]
-# Degree of the associated Legendre polynomial. Must have n >= 0.
-
-# m
-# ArrayLike[int]
-# order of the associated Legendre polynomial.
-
-# z
-# ArrayLike[float | complex]
-# Input value.
-
-# branch_cut
-# Optional[ArrayLike[int]]
-# Selects branch cut. Must be 2 (default) or 3. 2: cut on the real axis |z| > 1 3: cut on the real axis -1 < z < 1
-
-# norm
-# Optional[bool]
-# If True, compute the normalized associated Legendre polynomial. Default is False.
-
-# diff_n
-# Optional[int]
-# A non-negative integer. Compute and return all derivatives up to order diff_n. Default is 0.
 
 def bistatic_rcs(k: float, theta: float, phi: float, b: list, d: list) -> float:
     """
