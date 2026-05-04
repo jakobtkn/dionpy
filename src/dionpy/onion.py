@@ -402,31 +402,31 @@ class Onion:
         E_yz_dB = _E_magnitude(U, V, phi_fixed=np.pi / 2)      # YZ: x = 0, H-plane
 
         # ── 4.  Plot ─────────────────────────────────────────────────────────────
-        fig, axes = plt.subplots(3, 2, figsize=(13, 16))
+        _pt = 1. / 72.27
+        _tw = 455.24411 * _pt
+        fig, axes = plt.subplots(3, 2, figsize=(_tw, _tw * 1.5))
 
         rcs_ylabel = (
             r"$10\log_{10}\!\left(\sigma_\mathrm{3D}\,/\,\pi r_3^2\right)$  (dB)"
         )
 
         plane_cfg = [
-            # (rcs_data,  x_label_rcs,    rcs_title,           E_dB,      h_label,        v_label,       nf_title)
-            (rcs_xy, r"$\phi$ (degrees)", "RCS — XY  (θ = 90°)", E_xy_dB, r"$x/\lambda$", r"$y/\lambda$", r"|E$^{sc}$| — XY  (z = 0)"),
-            (rcs_xz, r"$\theta$ (degrees)","RCS — XZ  (E-plane, φ = 0°)",  E_xz_dB, r"$x/\lambda$", r"$z/\lambda$", r"|E$^{sc}$| — XZ  (y = 0)"),
-            (rcs_yz, r"$\theta$ (degrees)","RCS — YZ  (H-plane, φ = 90°)", E_yz_dB, r"$y/\lambda$", r"$z/\lambda$", r"|E$^{sc}$| — YZ  (x = 0)"),
+            (rcs_xy, r"$\phi$ (degrees)", r"RCS -- XY  ($\theta$ = $90^\circ$)",          E_xy_dB, r"$x/\lambda$", r"$y/\lambda$", r"$|E^{sc}|$ -- XY  (z = 0)"),
+            (rcs_xz, r"$\theta$ (degrees)", r"RCS -- XZ  (E-plane, $\varphi$ = $0^\circ$)",  E_xz_dB, r"$x/\lambda$", r"$z/\lambda$", r"$|E^{sc}|$ -- XZ  (y = 0)"),
+            (rcs_yz, r"$\theta$ (degrees)", r"RCS -- YZ  (H-plane, $\varphi$ = $90^\circ$)", E_yz_dB, r"$y/\lambda$", r"$z/\lambda$", r"$|E^{sc}|$ -- YZ  (x = 0)"),
         ]
 
         for row, (rcs, x_rcs, title_rcs, E_dB, h_lbl, v_lbl, title_nf) in enumerate(plane_cfg):
 
             # ── Column 0 : RCS ───────────────────────────────────────────────────
             ax = axes[row, 0]
-            ax.plot(theta_deg, _to_dB(rcs), color="steelblue", linewidth=1.5)
-            ax.axvline(90, color="gray", linestyle=":", linewidth=1)
-            ax.set_xlabel(x_rcs, fontsize=11)
-            ax.set_ylabel(rcs_ylabel, fontsize=10)
-            ax.set_title(title_rcs, fontsize=11)
+            ax.plot(theta_deg, _to_dB(rcs), color="steelblue")
+            ax.axvline(90, color="gray", linestyle=":", linewidth=0.8)
+            ax.set_xlabel(x_rcs)
+            ax.set_ylabel(rcs_ylabel)
+            ax.set_title(title_rcs)
             ax.set_xlim(0, 180)
             ax.set_xticks(np.arange(0, 181, 30))
-            ax.grid(True, linestyle=":", alpha=0.6)
 
             # ── Column 1 : Near-field |E| ────────────────────────────────────────
             ax = axes[row, 1]
@@ -442,13 +442,13 @@ class Onion:
                             fill=False, color="white", lw=1.5, ls="--")
             )
             ax.set_aspect("equal")
-            ax.set_xlabel(h_lbl, fontsize=11)
-            ax.set_ylabel(v_lbl, fontsize=11)
-            ax.set_title(title_nf, fontsize=11)
+            ax.set_xlabel(h_lbl)
+            ax.set_ylabel(v_lbl)
+            ax.set_title(title_nf)
             plt.colorbar(im, ax=ax, label=r"$20\log_{10}|E^{sc}|$  (dB V/m)")
 
-        title = f"Bistatic RCS & Near-Field  —  {label}  " \
+        title = rf"Bistatic RCS \& Near-Field  --  {label}  " \
                 rf"($f_0 = {self.freq/1e9:.2f}$ GHz,  $r_3 = {r3*1e3:.1f}$ mm)"
-        fig.suptitle(title, fontsize=13, fontweight="bold")
+        fig.suptitle(title, fontweight="bold")
         fig.tight_layout()
         return fig
