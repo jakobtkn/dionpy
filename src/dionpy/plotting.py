@@ -63,6 +63,8 @@ def plot_nearfield(onion: Onion, num_modes: int = 50, title: str = "") -> "Figur
          r"$z/\lambda$", r"XZ  (E-plane)"),
         (_E_dB(U, V, phi_fixed=np.pi / 2),
          r"$y/\lambda$", r"$z/\lambda$", r"YZ  (H-plane)"),
+        (_E_dB(U, V, theta_fixed=np.pi / 2),
+         r"$x/\lambda$", r"$y/\lambda$", r"XY  (equatorial)"),
     ]
 
     fig, axes = plt.subplots(1, 3, figsize=(_TW, _TW / 2.8))
