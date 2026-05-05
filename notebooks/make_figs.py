@@ -1,10 +1,5 @@
 """Regenerate all publication-quality PDF figures."""
-import matplotlib
-matplotlib.use("Agg")
-
-import matplotlib.pyplot as plt
-import numpy as np
-
+from dionpy.constants import C_0
 from dionpy.onion import (
     Onion,
     plot_nearfield,
@@ -12,7 +7,11 @@ from dionpy.onion import (
     plot_monostatic_vs_r,
     plot_forward_bw,
 )
-from dionpy.constants import C_0
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use("Agg")
+
 
 plt.style.use("../Plots/paper.mplstyle")
 
@@ -21,10 +20,10 @@ OUT = "../Plots"
 # ---------------------------------------------------------------------------
 # Jin test case — single-layer dielectric sphere, eps_r = 2.56, f = 400 GHz
 # ---------------------------------------------------------------------------
-_freq   = 400e9
-_lam0   = C_0 / _freq
-_eps_r  = 2.56
-_radii  = [1.0, 0.5, 0.2]   # r / lambda
+_freq = 400e9
+_lam0 = C_0 / _freq
+_eps_r = 2.56
+_radii = [1.0, 0.5, 0.2]   # r / lambda
 
 jin_configs = [
     dict(label=rf"r = {r}$\lambda$",
@@ -82,7 +81,8 @@ plt.close(fig)
 
 # Near-field for r = 0.5 lambda Jin sphere
 print("Generating RCS_jin_nearfield.pdf ...")
-jin_sphere = Onion.from_arrays(np.array([0.5 * _lam0]), np.array([_eps_r]), _freq)
+jin_sphere = Onion.from_arrays(
+    np.array([0.5 * _lam0]), np.array([_eps_r]), _freq)
 fig = plot_nearfield(jin_sphere, num_modes=50,
                      title=rf"Near-Field  ($\varepsilon_r = {_eps_r}$,  r = 0.5$\lambda$,  f = 400 GHz)")
 fig.savefig(f"{OUT}/RCS_jin_nearfield.pdf")
@@ -92,8 +92,10 @@ plt.close(fig)
 # Config A and Config B — layered spheres
 # ---------------------------------------------------------------------------
 configs = [
-    dict(label="Config A", r=np.array([3e-3,  4e-3,  12e-3]), eps=np.array([50, 1, 4]), freq=10e9),
-    dict(label="Config B", r=np.array([20e-3, 27e-3, 81e-3]), eps=np.array([50, 1, 4]), freq=1.5e9),
+    dict(label="Config A", r=np.array(
+        [3e-3,  4e-3,  12e-3]), eps=np.array([50, 1, 4]), freq=10e9),
+    dict(label="Config B", r=np.array(
+        [20e-3, 27e-3, 81e-3]), eps=np.array([50, 1, 4]), freq=1.5e9),
 ]
 
 # Bistatic RCS — Config A vs Config B
@@ -116,7 +118,7 @@ plt.close(fig)
 # Near-field — Config A (at resonance frequency)
 print("Generating Config_A_RCS_nearfield.pdf ...")
 sphere_a = Onion.from_arrays(np.array([3e-3, 4e-3, 12e-3]),
-                              np.array([50, 1, 4]), frequency=9.816e9)
+                             np.array([50, 1, 4]), frequency=9.816e9)
 fig = sphere_a.solve_and_plot_rcs_nearfield(num_modes=50, label="Config A")
 fig.savefig(f"{OUT}/Config_A_RCS_nearfield.pdf")
 plt.close(fig)
@@ -124,7 +126,7 @@ plt.close(fig)
 # Near-field — Config B (at resonance frequency)
 print("Generating Config_B_RCS_nearfield.pdf ...")
 sphere_b = Onion.from_arrays(np.array([20e-3, 27e-3, 81e-3]),
-                              np.array([50, 1, 4]), frequency=1.473e9)
+                             np.array([50, 1, 4]), frequency=1.473e9)
 fig = sphere_b.solve_and_plot_rcs_nearfield(num_modes=50, label="Config B")
 fig.savefig(f"{OUT}/Config_B_RCS_nearfield.pdf")
 plt.close(fig)

@@ -5,7 +5,7 @@
 #     "numpy",
 #     "matplotlib",
 #     "scipy",
-#     "dionpy @ https://jakobtkn.github.io/dionpy/dionpy-0.1.0-py3-none-any.whl",
+#     "dionpy @ https://jakobtkn.github.io/dionpy/dionpy-0.1.1-py3-none-any.whl",
 # ]
 # ///
 
