@@ -1,0 +1,47 @@
+## See https://duetosymmetry.com/code/latex-mpl-fig-tips/
+
+text.usetex: True
+text.latex.preamble: \usepackage{amsmath}\usepackage{amssymb}
+font.family: serif
+font.serif: Computer Modern
+savefig.bbox: tight
+savefig.format: pdf
+
+lines.linewidth: 1.0
+
+## ***************************************************************************
+## * AXES                                                                    *
+## ***************************************************************************
+axes.linewidth:     0.5
+axes.labelsize:     10
+axes.labelpad:      3.0
+axes.grid:          True
+axes.grid.axis:     both
+
+grid.linewidth:     0.3
+grid.linestyle:     :
+grid.alpha:         0.6
+
+## ***************************************************************************
+## * TICKS                                                                   *
+## ***************************************************************************
+xtick.top:           True
+xtick.major.width:   0.3
+xtick.labelsize:     8
+xtick.direction:     in
+
+ytick.right:         True
+ytick.labelsize:     8
+ytick.direction:     in
+
+## ***************************************************************************
+## * LEGEND                                                                  *
+## ***************************************************************************
+legend.loc:          upper right
+legend.frameon:      False
+legend.fontsize:     8
+
+## ***************************************************************************
+## * FIGURE                                                                  *
+## ***************************************************************************
+figure.dpi:         300
