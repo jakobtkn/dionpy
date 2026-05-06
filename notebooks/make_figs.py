@@ -44,7 +44,7 @@ fig = plot_bistatic_rcs(
     norm="lambda",
     ylim=(-50, 25),
     polar=False,
-    title=rf"Bistatic Radar Cross Section  ($\varepsilon_r = {_eps_r}$)",
+    title=rf"Bistatic Radar Cross Section ($\varepsilon_r = {_eps_r}$)",
 )
 fig.savefig(f"{OUT}/RCS_example_fig_7_14.pdf")
 plt.close(fig)
@@ -56,7 +56,7 @@ fig = plot_monostatic_vs_r(
     freq=_freq,
     r_over_lam=np.linspace(0.01, 2.5, 400),
     num_modes=30,
-    title=rf"Monostatic RCS --- Dielectric Sphere  ($\varepsilon_r = {_eps_r}$)",
+    title=rf"Monostatic RCS, Dielectric Sphere ($\varepsilon_r = {_eps_r}$)",
 )
 fig.savefig(f"{OUT}/RCS_example_fig_7_15.pdf")
 plt.close(fig)

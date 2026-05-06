@@ -42,7 +42,7 @@ def _plot_polar_rcs(ax, theta_rad, rcs_dB, floor, ceiling, step=10, **kwargs):
 
 
 def plot_nearfield(onion: Onion, num_modes: int = 50, title: str = "") -> "Figure":
-    """Near-field |E^sc| in dB for three cut planes (XZ, YZ, XY).
+    """Near-field |\boldsymbol{E}^sc| in dB for three cut planes (XZ, YZ, XY).
 
     Parameters
     ----------
@@ -85,11 +85,11 @@ def plot_nearfield(onion: Onion, num_modes: int = 50, title: str = "") -> "Figur
 
     panels = [
         (_E_dB(U, V, phi_fixed=0.0),         r"$x/\lambda$",
-         r"$z/\lambda$", r"XZ  (E-plane)"),
+         r"$z/\lambda$", r"$xz$ ($\boldsymbol{E}$-plane)"),
         (_E_dB(U, V, phi_fixed=np.pi / 2),
-         r"$y/\lambda$", r"$z/\lambda$", r"YZ  (H-plane)"),
+         r"$y/\lambda$", r"$z/\lambda$", r"$yz$  ($\boldsymbol{H}$-plane)"),
         (_E_dB(U, V, theta_fixed=np.pi / 2),
-         r"$x/\lambda$", r"$y/\lambda$", r"XY  (equatorial)"),
+         r"$x/\lambda$", r"$y/\lambda$", r"$xy$  (equatorial)"),
     ]
 
     fig, axes = plt.subplots(3, 1, figsize=(_TW, _TW * 1.2))
@@ -104,10 +104,10 @@ def plot_nearfield(onion: Onion, num_modes: int = 50, title: str = "") -> "Figur
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
         ax.set_title(plane_title)
-        plt.colorbar(im, ax=ax, label=r"$20\log_{10}|E^{sc}|$  (dB V/m)")
+        plt.colorbar(im, ax=ax, label=r"$20\log_{10}|\boldsymbol{E}^{sc}|$  (dB V/m)")
 
     fig.suptitle(
-        title or rf"Near-Field $|E^{{sc}}|$  ($f = {onion.freq/1e9:.2f}$ GHz)",
+        title or rf"Near-Field $|\boldsymbol{E}^{{sc}}|$  ($f = {onion.freq/1e9:.2f}$ GHz)",
         fontweight="bold",
     )
     fig.tight_layout()
@@ -117,7 +117,7 @@ def plot_nearfield(onion: Onion, num_modes: int = 50, title: str = "") -> "Figur
 def plot_bistatic_rcs(configs, num_modes: int = 30, norm: str = "r3",
                       ylim=None, colors=None, title: str = "",
                       polar: bool = True) -> "Figure":
-    """Bistatic RCS vs theta for E-plane and H-plane.
+    """Bistatic RCS vs theta for $\boldsymbol{E}$-plane and $\boldsymbol{H}$-plane.
 
     Parameters
     ----------
@@ -176,8 +176,8 @@ def plot_bistatic_rcs(configs, num_modes: int = 30, norm: str = "r3",
         cfg_colors.append(color)
 
     planes = [
-        (all_rcs_E, r"E-Plane  ($\phi = 0^\circ$)"),
-        (all_rcs_H, r"H-Plane  ($\phi = 90^\circ$)"),
+        (all_rcs_E, r"$\boldsymbol{E}$-Plane  ($\phi = 0^\circ$)"),
+        (all_rcs_H, r"$\boldsymbol{H}$-Plane  ($\phi = 90^\circ$)"),
     ]
 
     if polar:
@@ -358,8 +358,8 @@ def plot_forward_bw(configs, bw_frac: float = 0.3, n_freqs: int = 400,
         ax_top.set_xticklabels([f"{f/1e9:.3f}" for f in tick_freqs])
 
         layer_str = ",   ".join(
-            rf"$\varepsilon_r={e}$, $r={ri*1e3:.0f}$ mm"
-            for e, ri in zip(eps, r)
+            rf"$\varepsilon_{{r,{i+1}}}={e}$, $r_{i+1}={ri*1e3:.0f}$ mm"
+            for i, (e, ri) in enumerate(zip(eps, r))
         )
         ax.set_xlabel(r"$(f - f_0)\;/\;\mathrm{BW}$")
         ax.set_ylabel(
@@ -433,12 +433,12 @@ def plot_rcs_nearfield(onion: Onion, num_modes: int = 50, label: str = "") -> "F
     gs = GridSpec(3, 2, figure=fig)
 
     plane_cfg = [
-        (rcs_xy, r"RCS -- XY  ($\theta = 90^\circ$)",
-         E_xy_dB, r"$x/\lambda$", r"$y/\lambda$", r"$|E^{sc}|$ -- XY  (z = 0)"),
-        (rcs_xz, r"RCS -- XZ  (E-plane, $\phi = 0^\circ$)",
-         E_xz_dB, r"$x/\lambda$", r"$z/\lambda$", r"$|E^{sc}|$ -- XZ  (y = 0)"),
-        (rcs_yz, r"RCS -- YZ  (H-plane, $\phi = 90^\circ$)",
-         E_yz_dB, r"$y/\lambda$", r"$z/\lambda$", r"$|E^{sc}|$ -- YZ  (x = 0)"),
+        (rcs_xy, r"RCS -- $xy$ ($\theta = 90^\circ$)",
+         E_xy_dB, r"$x/\lambda$", r"$y/\lambda$", r"$|\boldsymbol{E}^{sc}|$ -- $xy$ (z = 0)"),
+        (rcs_xz, r"RCS -- $xz$  ($\boldsymbol{E}$-plane, $\phi = 0^\circ$)",
+         E_xz_dB, r"$x/\lambda$", r"$z/\lambda$", r"$|\boldsymbol{E}^{sc}|$ -- $xz$ (y = 0)"),
+        (rcs_yz, r"RCS -- $yz$  ($\boldsymbol{H}$-plane, $\phi = 90^\circ$)",
+         E_yz_dB, r"$y/\lambda$", r"$z/\lambda$", r"$|\boldsymbol{E}^{sc}|$ -- $yz$  (x = 0)"),
     ]
 
     for row, (rcs, title_rcs, E_dB, h_lbl, v_lbl, title_nf) in enumerate(plane_cfg):
@@ -457,11 +457,11 @@ def plot_rcs_nearfield(onion: Onion, num_modes: int = 50, label: str = "") -> "F
         ax.set_xlabel(h_lbl)
         ax.set_ylabel(v_lbl)
         ax.set_title(title_nf)
-        plt.colorbar(im, ax=ax, label=r"$20\log_{10}|E^{sc}|$  (dB V/m)")
+        plt.colorbar(im, ax=ax, label=r"$20\log_{10}|\boldsymbol{E}^{sc}|$  (dB V/m)")
 
     fig.suptitle(
         rf"Bistatic RCS \& Near-Field  --  {label}  "
-        rf"($f_0 = {onion.freq/1e9:.2f}$ GHz,  $r_3 = {r3*1e3:.1f}$ mm)",
+        rf"($f = {onion.freq/1e9:.2f}$ GHz,  $r_3 = {r3*1e3:.1f}$ mm)",
         fontweight="bold",
     )
     fig.tight_layout()
@@ -472,8 +472,8 @@ def plot_field_snapshots(onion: Onion, num_modes: int = 50, title: str = "") -> 
     """Six-panel near-field figure (Jin Fig. 7.13 style).
 
     3 rows × 2 columns:
-      col 0 – E-plane (xz, φ=0),  component ηH_φ
-      col 1 – H-plane (yz, φ=π/2), component E_φ
+      col 0 – $\boldsymbol{E}$-plane (xz, φ=0),  component ηH_φ
+      col 1 – $\boldsymbol{H}$-plane (yz, φ=π/2), component E_φ
 
       row 0 – snapshot (Re) of scattered field
       row 1 – snapshot (Re) of total field
@@ -495,7 +495,7 @@ def plot_field_snapshots(onion: Onion, num_modes: int = 50, title: str = "") -> 
     inside = Hg**2 + Vg**2 < r3**2
     r_grid = np.sqrt(Hg**2 + Vg**2)
     th = np.where(r_grid > 0, np.arccos(np.clip(Vg / r_grid, -1, 1)), 0.0)
-    inc_phase = np.exp(1j * k * Vg)     # e^{ikz}, z = vertical axis
+    inc_phase = np.exp(1j * k * Vg)     # \boldsymbol{e}^{ikz}, z = vertical axis
 
     # Scattered field in each plane
     _, _, _, _, _, H_phi_sc = scattered_field(b_sc, d_sc, k, r_grid, th,
@@ -517,12 +517,12 @@ def plot_field_snapshots(onion: Onion, num_modes: int = 50, title: str = "") -> 
         return np.where(inside, np.nan, np.abs(arr))
 
     panels = [
-        (_re(eta_Hphi_sc),   r"$\eta H_\phi^s$  (E-plane)",   r"$x/\lambda$", r"$z/\lambda$", -1, 1),
-        (_re(E_phi_sc),      r"$E_\phi^s$  (H-plane)",         r"$y/\lambda$", r"$z/\lambda$", -1, 1),
-        (_re(eta_Hphi_tot),  r"$\eta H_\phi$  (E-plane)",      r"$x/\lambda$", r"$z/\lambda$", -2, 2),
-        (_re(E_phi_tot),     r"$E_\phi$  (H-plane)",            r"$y/\lambda$", r"$z/\lambda$", -2, 2),
-        (_abs(eta_Hphi_tot), r"$|\eta H_\phi|$  (E-plane)",    r"$x/\lambda$", r"$z/\lambda$",  0, 2),
-        (_abs(E_phi_tot),    r"$|E_\phi|$  (H-plane)",          r"$y/\lambda$", r"$z/\lambda$",  0, 2),
+        (_re(eta_Hphi_sc),   r"$\eta H_\phi^s$  ($\boldsymbol{E}$-plane)",   r"$x/\lambda$", r"$z/\lambda$", -1, 1),
+        (_re(E_phi_sc),      r"$E_\phi^s$  ($\boldsymbol{H}$-plane)",         r"$y/\lambda$", r"$z/\lambda$", -1, 1),
+        (_re(eta_Hphi_tot),  r"$\eta H_\phi$  ($\boldsymbol{E}$-plane)",      r"$x/\lambda$", r"$z/\lambda$", -2, 2),
+        (_re(E_phi_tot),     r"$E_\phi$  ($\boldsymbol{H}$-plane)",            r"$y/\lambda$", r"$z/\lambda$", -2, 2),
+        (_abs(eta_Hphi_tot), r"$|\eta H_\phi|$  ($\boldsymbol{E}$-plane)",    r"$x/\lambda$", r"$z/\lambda$",  0, 2),
+        (_abs(E_phi_tot),    r"$|E_\phi|$  ($\boldsymbol{H}$-plane)",          r"$y/\lambda$", r"$z/\lambda$",  0, 2),
     ]
 
     fig, axes = plt.subplots(3, 2, figsize=(_TW * 1.2, _TW * 1.6))
