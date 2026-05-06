@@ -17,6 +17,30 @@ _TW = 0.9 * 455.24411 * _pt    # 0.9 × text width in inches
 _GOLDEN = (1 + 5**0.5) / 2
 
 
+def _setup_polar_rcs(ax):
+    """Configure a polar axis for antenna-convention RCS display (0° at top, CW)."""
+    ax.set_theta_zero_location('N')
+    ax.set_theta_direction(-1)
+
+
+def _plot_polar_rcs(ax, theta_rad, rcs_dB, floor, ceiling, step=10, **kwargs):
+    """Mirror a 0..π pattern to 0..2π and plot it on a polar axis.
+
+    The radius maps dB values linearly: floor → 0, ceiling → ceiling-floor.
+    """
+    # Mirror pattern to full circle
+    theta_full = np.concatenate([theta_rad, 2 * np.pi - theta_rad[-2:0:-1]])
+    rcs_full = np.concatenate([rcs_dB, rcs_dB[-2:0:-1]])
+    r = np.maximum(rcs_full - floor, 0.0)
+    ax.plot(theta_full, r, **kwargs)
+
+    # Radial ticks labeled in dB
+    tick_vals = np.arange(floor, ceiling + step, step)
+    ax.set_yticks(tick_vals - floor)
+    ax.set_yticklabels([f"{v:.0f}" for v in tick_vals], fontsize=7)
+    ax.set_rlim(0, ceiling - floor)
+
+
 def plot_nearfield(onion: Onion, num_modes: int = 50, title: str = "") -> "Figure":
     """Near-field |E^sc| in dB for three cut planes (XZ, YZ, XY).
 
@@ -91,7 +115,8 @@ def plot_nearfield(onion: Onion, num_modes: int = 50, title: str = "") -> "Figur
 
 
 def plot_bistatic_rcs(configs, num_modes: int = 30, norm: str = "r3",
-                      ylim=None, colors=None, title: str = "") -> "Figure":
+                      ylim=None, colors=None, title: str = "",
+                      polar: bool = True) -> "Figure":
     """Bistatic RCS vs theta for E-plane and H-plane.
 
     Parameters
@@ -109,6 +134,8 @@ def plot_bistatic_rcs(configs, num_modes: int = 30, norm: str = "r3",
         Line colours; defaults to :data:`_DEFAULT_COLORS`.
     title : str
         Figure suptitle; auto-generated when empty.
+    polar : bool
+        Use polar axes (default) or Cartesian axes.
     """
 
     if colors is None:
@@ -117,12 +144,11 @@ def plot_bistatic_rcs(configs, num_modes: int = 30, norm: str = "r3",
     theta = np.linspace(0, np.pi, 361)
     theta_deg = np.degrees(theta)
 
-    fig, axes = plt.subplots(2, 1, figsize=(_TW, _TW * _GOLDEN))
-
-    ylabel = None
+    # Collect all dB values first to determine a shared floor/ceiling
+    all_rcs_E, all_rcs_H, cfg_labels, cfg_colors = [], [], [], []
+    norm_label = None
     for cfg, color in zip(configs, colors):
-        r, eps, freq = np.asarray(cfg["r"]), np.asarray(
-            cfg["eps"]), cfg["freq"]
+        r, eps, freq = np.asarray(cfg["r"]), np.asarray(cfg["eps"]), cfg["freq"]
         r3 = r[-1]
         sphere = Onion.from_arrays(r, eps, freq)
         _, b_TM, _, b_TE = sphere.solve(num_modes)
@@ -133,34 +159,65 @@ def plot_bistatic_rcs(configs, num_modes: int = 30, norm: str = "r3",
 
         if norm == "r3":
             normalization = np.pi * r3**2
-            ylabel = r"$10\log_{10}\!\left(\sigma_\mathrm{3D}\,/\,\pi r_3^2\right)$  (dB)"
+            norm_label = r"$10\log_{10}\!\left(\sigma_\mathrm{3D}\,/\,\pi r_3^2\right)$  (dB)"
         else:
             normalization = lam**2
-            ylabel = r"RCS / $\lambda^2$  (dB)"
+            norm_label = r"RCS / $\lambda^2$  (dB)"
 
-        rcs_E = np.array([bistatic_rcs(k, t, 0.0,       b_sc, d_sc)
-                         for t in theta])
-        rcs_H = np.array([bistatic_rcs(k, t, np.pi / 2, b_sc, d_sc)
-                         for t in theta])
-        label = cfg.get("label", "")
+        rcs_E = 10 * np.log10(np.maximum(
+            np.array([bistatic_rcs(k, t, 0.0,       b_sc, d_sc) for t in theta]) / normalization,
+            1e-20))
+        rcs_H = 10 * np.log10(np.maximum(
+            np.array([bistatic_rcs(k, t, np.pi / 2, b_sc, d_sc) for t in theta]) / normalization,
+            1e-20))
+        all_rcs_E.append(rcs_E)
+        all_rcs_H.append(rcs_H)
+        cfg_labels.append(cfg.get("label", ""))
+        cfg_colors.append(color)
 
-        for ax, rcs in zip(axes, [rcs_E, rcs_H]):
-            ax.plot(theta_deg, 10 * np.log10(np.maximum(rcs / normalization, 1e-20)),
-                    color=color, label=label)
+    planes = [
+        (all_rcs_E, r"E-Plane  ($\phi = 0^\circ$)"),
+        (all_rcs_H, r"H-Plane  ($\phi = 90^\circ$)"),
+    ]
 
-    for ax, plane in zip(axes, [r"E-Plane  ($\phi$ = $0^\circ$)",
-                                r"H-Plane  ($\phi$ = $90^\circ$)"]):
-        ax.set_xlabel(r"$\theta$  (degrees)")
-        ax.set_ylabel(ylabel)
-        ax.set_title(rf"Bistatic RCS -- {plane}")
-        ax.set_xlim(0, 180)
-        ax.set_xticks(np.arange(0, 181, 30))
+    if polar:
+        all_dB = np.concatenate(all_rcs_E + all_rcs_H)
         if ylim is not None:
-            ax.set_ylim(ylim)
-        ax.legend()
+            floor, ceiling = ylim
+        else:
+            floor = np.floor(np.min(all_dB) / 10) * 10
+            ceiling = np.ceil(np.max(all_dB) / 10) * 10
+
+        fig, axes = plt.subplots(1, 2, figsize=(_TW, _TW / _GOLDEN),
+                                 subplot_kw={'projection': 'polar'})
+        for ax in axes:
+            _setup_polar_rcs(ax)
+
+        for ax, (rcs_list, plane_title) in zip(axes, planes):
+            for rcs_dB, label, color in zip(rcs_list, cfg_labels, cfg_colors):
+                _plot_polar_rcs(ax, theta, rcs_dB, floor, ceiling, color=color, label=label)
+            ax.set_title(plane_title, pad=18)
+            if any(cfg_labels):
+                ax.legend(loc='upper right', bbox_to_anchor=(1.35, 1.15), fontsize=7)
+
+        fig.text(0.5, -0.02, norm_label, ha='center', fontsize=8)
+    else:
+        fig, axes = plt.subplots(2, 1, figsize=(_TW, _TW * _GOLDEN))
+
+        for ax, (rcs_list, plane_title) in zip(axes, planes):
+            for rcs_dB, label, color in zip(rcs_list, cfg_labels, cfg_colors):
+                ax.plot(theta_deg, rcs_dB, color=color, label=label)
+            ax.set_xlabel(r"$\theta$  (degrees)")
+            ax.set_ylabel(norm_label)
+            ax.set_title(rf"Bistatic RCS -- {plane_title}")
+            ax.set_xlim(0, 180)
+            ax.set_xticks(np.arange(0, 181, 30))
+            if ylim is not None:
+                ax.set_ylim(ylim)
+            ax.legend()
 
     if title:
-        fig.suptitle(title, fontweight="bold", y=1.01)
+        fig.suptitle(title, fontweight="bold", y=1.01 if not polar else 1.0)
     fig.tight_layout()
     return fig
 
@@ -334,7 +391,6 @@ def plot_rcs_nearfield(onion: Onion, num_modes: int = 50, label: str = "") -> "F
     norm = np.pi * r3**2
 
     theta = np.linspace(0, np.pi, 361)
-    theta_deg = np.degrees(theta)
 
     rcs_xy = np.array([bistatic_rcs(k, np.pi / 2, t, b_sc, d_sc) for t in theta])
     rcs_xz = np.array([bistatic_rcs(k, t, 0.0, b_sc, d_sc) for t in theta])
@@ -368,29 +424,30 @@ def plot_rcs_nearfield(onion: Onion, num_modes: int = 50, label: str = "") -> "F
     E_xz_dB = _E_dB(U, V, phi_fixed=0.0)
     E_yz_dB = _E_dB(U, V, phi_fixed=np.pi / 2)
 
-    fig, axes = plt.subplots(3, 2, figsize=(_TW, _TW * 1.5))
-    rcs_ylabel = r"$10\log_{10}\!\left(\sigma_\mathrm{3D}\,/\,\pi r_3^2\right)$  (dB)"
+    all_rcs_dB = np.concatenate([_to_dB(rcs_xy), _to_dB(rcs_xz), _to_dB(rcs_yz)])
+    floor = np.floor(np.min(all_rcs_dB) / 10) * 10
+    ceiling = np.ceil(np.max(all_rcs_dB) / 10) * 10
+
+    from matplotlib.gridspec import GridSpec
+    fig = plt.figure(figsize=(_TW, _TW * 1.5))
+    gs = GridSpec(3, 2, figure=fig)
 
     plane_cfg = [
-        (rcs_xy, r"$\phi$ (degrees)", r"RCS -- XY  ($\theta$ = $90^\circ$)",
+        (rcs_xy, r"RCS -- XY  ($\theta = 90^\circ$)",
          E_xy_dB, r"$x/\lambda$", r"$y/\lambda$", r"$|E^{sc}|$ -- XY  (z = 0)"),
-        (rcs_xz, r"$\theta$ (degrees)", r"RCS -- XZ  (E-plane, $\phi$ = $0^\circ$)",
+        (rcs_xz, r"RCS -- XZ  (E-plane, $\phi = 0^\circ$)",
          E_xz_dB, r"$x/\lambda$", r"$z/\lambda$", r"$|E^{sc}|$ -- XZ  (y = 0)"),
-        (rcs_yz, r"$\theta$ (degrees)", r"RCS -- YZ  (H-plane, $\phi$ = $90^\circ$)",
+        (rcs_yz, r"RCS -- YZ  (H-plane, $\phi = 90^\circ$)",
          E_yz_dB, r"$y/\lambda$", r"$z/\lambda$", r"$|E^{sc}|$ -- YZ  (x = 0)"),
     ]
 
-    for row, (rcs, x_rcs, title_rcs, E_dB, h_lbl, v_lbl, title_nf) in enumerate(plane_cfg):
-        ax = axes[row, 0]
-        ax.plot(theta_deg, _to_dB(rcs), color="steelblue")
-        ax.axvline(90, color="gray", linestyle=":", linewidth=0.8)
-        ax.set_xlabel(x_rcs)
-        ax.set_ylabel(rcs_ylabel)
-        ax.set_title(title_rcs)
-        ax.set_xlim(0, 180)
-        ax.set_xticks(np.arange(0, 181, 30))
+    for row, (rcs, title_rcs, E_dB, h_lbl, v_lbl, title_nf) in enumerate(plane_cfg):
+        ax = fig.add_subplot(gs[row, 0], projection='polar')
+        _setup_polar_rcs(ax)
+        _plot_polar_rcs(ax, theta, _to_dB(rcs), floor, ceiling, color="steelblue")
+        ax.set_title(title_rcs, pad=18)
 
-        ax = axes[row, 1]
+        ax = fig.add_subplot(gs[row, 1])
         vmin = np.nanpercentile(E_dB, 5)
         vmax = np.nanpercentile(E_dB, 95)
         im = ax.pcolormesh(U / lam, V / lam, E_dB, shading="auto", cmap="inferno",

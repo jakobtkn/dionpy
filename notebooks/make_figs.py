@@ -15,6 +15,7 @@ matplotlib.use("Agg")
 
 plt.style.use("../Plots/paper.mplstyle")
 
+N_MODES = 50
 OUT = "../Plots"
 
 # ---------------------------------------------------------------------------
@@ -39,9 +40,10 @@ jin_configs = [
 print("Generating RCS_example_fig_7_14.pdf ...")
 fig = plot_bistatic_rcs(
     jin_configs,
-    num_modes=30,
+    num_modes=N_MODES,
     norm="lambda",
     ylim=(-50, 25),
+    polar=False,
     title=rf"Bistatic Radar Cross Section  ($\varepsilon_r = {_eps_r}$)",
 )
 fig.savefig(f"{OUT}/RCS_example_fig_7_14.pdf")
@@ -52,7 +54,8 @@ print("Generating RCS_example_fig_7_15.pdf ...")
 fig = plot_monostatic_vs_r(
     permittivities=_eps_r,
     freq=_freq,
-    num_modes=50,
+    r_over_lam=np.linspace(0.01, 2.5, 400),
+    num_modes=30,
     title=rf"Monostatic RCS --- Dielectric Sphere  ($\varepsilon_r = {_eps_r}$)",
 )
 fig.savefig(f"{OUT}/RCS_example_fig_7_15.pdf")
@@ -70,7 +73,7 @@ configs = [
 
 # Forward scattering vs frequency — Config A & B combined
 print("Generating Bistatic_RCS_forward_BW.pdf ...")
-fig, peak_freqs = plot_forward_bw(configs, bw_frac=0.3, n_freqs=400, num_modes=50)
+fig, peak_freqs = plot_forward_bw(configs, bw_frac=0.3, n_freqs=300, num_modes=N_MODES)
 fig.savefig(f"{OUT}/Bistatic_RCS_forward_BW.pdf")
 plt.close(fig)
 
@@ -78,7 +81,7 @@ plt.close(fig)
 print("Generating Config_A_RCS_and_nearfield.pdf ...")
 sphere_a = Onion.from_arrays(np.array([3e-3, 4e-3, 12e-3]),
                              np.array([50, 1, 4]), frequency=peak_freqs[0])
-fig = plot_rcs_nearfield(sphere_a, num_modes=50, label="Config A")
+fig = plot_rcs_nearfield(sphere_a, num_modes=N_MODES, label="Config A")
 fig.savefig(f"{OUT}/Config_A_RCS_and_nearfield.pdf")
 plt.close(fig)
 
@@ -86,7 +89,7 @@ plt.close(fig)
 print("Generating Config_B_RCS_and_nearfield.pdf ...")
 sphere_b = Onion.from_arrays(np.array([20e-3, 27e-3, 81e-3]),
                              np.array([50, 1, 4]), frequency=peak_freqs[1])
-fig = plot_rcs_nearfield(sphere_b, num_modes=50, label="Config B")
+fig = plot_rcs_nearfield(sphere_b, num_modes=N_MODES, label="Config B")
 fig.savefig(f"{OUT}/Config_B_RCS_and_nearfield.pdf")
 plt.close(fig)
 
