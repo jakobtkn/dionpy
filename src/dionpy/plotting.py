@@ -13,7 +13,7 @@ from .rcs import bistatic_rcs
 _DEFAULT_COLORS = ["steelblue", "darkorange", "seagreen", "crimson", "purple"]
 
 _pt = 1.0 / 72.27
-_TW = 455.24411 * _pt          # text width in inches
+_TW = 0.9 * 455.24411 * _pt    # 0.9 × text width in inches
 _GOLDEN = (1 + 5**0.5) / 2
 
 
