@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from .constants import MU_0, EPS_0, ETA_0
-from .functions import riccati_jn, riccati_h1, riccati_h2
+from .functions import riccati_h1, riccati_h2
 
 
 class Mode(Enum):
@@ -50,8 +50,6 @@ class Onion:
     freq: float
     layers: list[Layer] = field(default_factory=list)
 
-
-
     @classmethod
     def from_arrays(cls, outer_radii: np.ndarray, permittivities: np.ndarray, frequency: float) -> "Onion":
         inner = [Layer(i, float(r), float(e))
@@ -81,57 +79,6 @@ class Onion:
     def permittivities(self) -> np.ndarray:
         return np.array([layer.rel_permitivity for layer in self.layers])
 
-    def bc_E_TE_mode(self, i, m):
-        ai = riccati_h1(m, self.k(i)*self.r(i))/self.mu(i)
-        bi = riccati_h2(m, self.k(i)*self.r(i))/self.mu(i)
-        aip1 = riccati_h1(m, self.k(i+1)*self.r(i))/self.mu(i+1)
-        bip1 = riccati_h2(m, self.k(i+1)*self.r(i))/self.mu(i+1)
-        return np.array([ai, bi, -aip1, -bip1])
-
-    def bc_H_TE_mode(self, i, m):
-        ai = riccati_h1(
-            m, self.k(i)*self.r(i), deriv=True)/self.k(i)
-        bi = riccati_h2(
-            m, self.k(i)*self.r(i), deriv=True)/self.k(i)
-        aip1 = riccati_h1(
-            m, self.k(i+1)*self.r(i), deriv=True)/self.k(i+1)
-        bip1 = riccati_h2(
-            m, self.k(i+1)*self.r(i), deriv=True)/self.k(i+1)
-        return np.array([ai, bi, -aip1, -bip1])
-
-    def bc_E_TM_mode(self, i, m):
-        ci = riccati_h1(m, self.k(i)*self.r(i))/self.k(i)
-        di = riccati_h2(m, self.k(i)*self.r(i))/self.k(i)
-        cip1 = riccati_h1(
-            m, self.k(i+1)*self.r(i))/self.k(i+1)
-        dip1 = riccati_h2(
-            m, self.k(i+1)*self.r(i))/self.k(i+1)
-        return np.array([ci, di, -cip1, -dip1])
-
-    def bc_H_TM_mode(self, i, m):
-        ci = riccati_h1(m, self.k(i)*self.r(i), deriv=True)/self.mu(i)
-        di = riccati_h2(m, self.k(i)*self.r(i), deriv=True)/self.mu(i)
-        cip1 = riccati_h1(
-            m, self.k(i+1)*self.r(i), deriv=True)/self.mu(i+1)
-        dip1 = riccati_h2(
-            m, self.k(i+1)*self.r(i), deriv=True)/self.mu(i+1)
-        return np.array([ci, di, -cip1, -dip1])
-
-    def _rhs_prefactor(self, n):
-        return 1j**(-n)*(2*n+1)/(n*(n+1))
-
-    def rhs_E_TE(self, n):
-        return self._rhs_prefactor(n)*riccati_jn(n, self.k(-1)*self.r(-2))/self.mu(-1)
-
-    def rhs_H_TE(self, n):
-        return self._rhs_prefactor(n)*riccati_jn(n, self.k(-1)*self.r(-2), derivative=True)/self.k(-1)
-
-    def rhs_E_TM(self, n):
-        return self._rhs_prefactor(n)*riccati_jn(n, self.k(-1)*self.r(-2))/self.k(-1)
-
-    def rhs_H_TM(self, n):
-        return self._rhs_prefactor(n)*riccati_jn(n, self.k(-1)*self.r(-2), derivative=True)/self.mu(-1)
-
     def solve(self, num_modes: int):
         num_layers = len(self.layers)
         a_TM = np.zeros((num_modes, num_layers), dtype=complex)
@@ -139,7 +86,7 @@ class Onion:
         a_TE = np.zeros((num_modes, num_layers), dtype=complex)
         b_TE = np.zeros((num_modes, num_layers), dtype=complex)
 
-        for m in range(1,num_modes):
+        for m in range(1, num_modes):
             A_TM, A_TE, rhs_TM, rhs_TE = self.assemble_one_mode(m)
             x_TM = np.linalg.solve(A_TM, rhs_TM)
             x_TE = np.linalg.solve(A_TE, rhs_TE)
@@ -148,7 +95,7 @@ class Onion:
             a_TE[m, :] = x_TE[0::2]
             b_TE[m, :] = x_TE[1::2]
 
-        return a_TM,b_TM,a_TE,b_TE
+        return a_TM, b_TM, a_TE, b_TE
 
     def assemble_one_mode(self, mode):
         """
@@ -158,8 +105,40 @@ class Onion:
         num_unknowns: int = 2*num_layers
         A_TM = np.zeros((num_unknowns, num_unknowns), dtype=complex)
         A_TE = np.zeros((num_unknowns, num_unknowns), dtype=complex)
-        rhs_TM = np.zeros((num_unknowns), dtype=complex)
-        rhs_TE = np.zeros((num_unknowns), dtype=complex)
+        rhs_TM = np.zeros(num_unknowns, dtype=complex)
+        rhs_TE = np.zeros(num_unknowns, dtype=complex)
+
+        xs_in = np.array([self.k(i) * self.r(i)
+                         for i in range(num_layers - 1)])
+        xs_out = np.array([self.k(i+1) * self.r(i)
+                          for i in range(num_layers - 1)])
+
+
+        # Precompute Riccati Functions
+        H1_in,  H1p_in = riccati_h1(mode, xs_in),  riccati_h1(
+            mode, xs_in,  deriv=True)
+        H2_in,  H2p_in = riccati_h2(mode, xs_in),  riccati_h2(
+            mode, xs_in,  deriv=True)
+        H1_out, H1p_out = riccati_h1(
+            mode, xs_out), riccati_h1(mode, xs_out, deriv=True)
+        H2_out, H2p_out = riccati_h2(
+            mode, xs_out), riccati_h2(mode, xs_out, deriv=True)
+
+        def bc_E_TE(i):
+            return np.array([H1_in[i]/self.mu(i),   H2_in[i]/self.mu(i),
+                             -H1_out[i]/self.mu(i+1), -H2_out[i]/self.mu(i+1)])
+
+        def bc_H_TE(i):
+            return np.array([H1p_in[i]/self.k(i),   H2p_in[i]/self.k(i),
+                             -H1p_out[i]/self.k(i+1), -H2p_out[i]/self.k(i+1)])
+
+        def bc_E_TM(i):
+            return np.array([H1_in[i]/self.k(i),   H2_in[i]/self.k(i),
+                             -H1_out[i]/self.k(i+1), -H2_out[i]/self.k(i+1)])
+
+        def bc_H_TM(i):
+            return np.array([H1p_in[i]/self.mu(i),   H2p_in[i]/self.mu(i),
+                             -H1p_out[i]/self.mu(i+1), -H2p_out[i]/self.mu(i+1)])
 
         # Enforce a^0 = b^0
         A_TM[0, :2] = [1, -1]
@@ -167,21 +146,21 @@ class Onion:
 
         # Enforce interface conditions
         for layer in self.layers[:-1]:
-            A_TM[layer.row_E, layer.cols] = self.bc_E_TM_mode(
-                layer.index, mode)
-            A_TM[layer.row_H, layer.cols] = self.bc_H_TM_mode(
-                layer.index, mode)
+            i = layer.index
+            A_TM[layer.row_E, layer.cols] = bc_E_TM(i)
+            A_TM[layer.row_H, layer.cols] = bc_H_TM(i)
+            A_TE[layer.row_E, layer.cols] = bc_E_TE(i)
+            A_TE[layer.row_H, layer.cols] = bc_H_TE(i)
 
-            A_TE[layer.row_E, layer.cols] = self.bc_E_TE_mode(
-                layer.index, mode)
-            A_TE[layer.row_H, layer.cols] = self.bc_H_TE_mode(
-                layer.index, mode)
-
+        # RHS — xs_out[-1] = k(-1)*r(-2), reuse Jn/Jnp derived above
+        Jn = (H1_out[-1] + H2_out[-1]) / 2
+        Jnp = (H1p_out[-1] + H2p_out[-1]) / 2
+        factor = 1j**(-mode)*(2*mode+1)/(mode*(mode+1))
         last_interface_layer: Layer = self.layers[-2]
-        rhs_TM[last_interface_layer.row_E] = self.rhs_E_TM(mode)
-        rhs_TM[last_interface_layer.row_H] = self.rhs_H_TM(mode)
-        rhs_TE[last_interface_layer.row_E] = self.rhs_E_TE(mode)
-        rhs_TE[last_interface_layer.row_H] = self.rhs_H_TE(mode)
+        rhs_TM[last_interface_layer.row_E] = factor * Jn / self.k(-1)
+        rhs_TM[last_interface_layer.row_H] = factor * Jnp / self.mu(-1)
+        rhs_TE[last_interface_layer.row_E] = factor * Jn / self.mu(-1)
+        rhs_TE[last_interface_layer.row_H] = factor * Jnp / self.k(-1)
 
         # Enforce a^l = 0
         A_TE[:, -2] = 0
