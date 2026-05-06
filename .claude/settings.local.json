@@ -4,7 +4,10 @@
       "Bash(uvx marimo *)",
       "Bash(.venv/bin/python -c \"from dionpy.field import make_A_r, make_F_r, scattered_EH; import numpy as np; print\\('imports OK'\\)\")",
       "Bash(uv add *)",
-      "Bash(python -m pytest tests/test_dionpy.py -v)"
+      "Bash(python -m pytest tests/test_dionpy.py -v)",
+      "WebFetch(domain:pyodide.org)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }

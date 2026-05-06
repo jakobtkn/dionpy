@@ -30,8 +30,11 @@ def bistatic_rcs(k: float, theta: float, phi: float, b: list, d: list) -> float:
 
     Pm1_all = assoc_legendre_p_all(N-1, 1, cos_t, diff_n=1)
 
-    dP_dtheta = -sin_t * Pm1_all[1,:,1]
-    Pm1_over_sinT = Pm1_all[0,:,1] / sin_t
+    if abs(sin_t) < 1e-9:
+        dP_dtheta = -cos_t * Pm1_all[1,:,0]
+    else:
+        dP_dtheta = -sin_t * Pm1_all[1,:,1]
+    Pm1_over_sinT = -Pm1_all[1,:,0]
     jm = 1j ** np.arange(0, N)
     sum1 = np.sum(jm * (b * dP_dtheta + d * Pm1_over_sinT))
     sum2 = np.sum(jm * (b * Pm1_over_sinT + d * dP_dtheta))
